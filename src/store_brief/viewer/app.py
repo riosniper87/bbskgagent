@@ -54,9 +54,9 @@ def create_app(
     ):
         posts = loader.list_posts(query=q, kind=kind, needs_review=needs_review)
         return templates.TemplateResponse(
+            request,
             "index.html",
             {
-                "request": request,
                 "posts": posts,
                 "q": q or "",
                 "kind": kind or "",
@@ -71,8 +71,9 @@ def create_app(
         if detail is None:
             raise HTTPException(404, "post not found")
         return templates.TemplateResponse(
+            request,
             "post.html",
-            {"request": request, "post": detail},
+            {"post": detail},
             headers=_NO_CACHE,
         )
 
@@ -115,9 +116,9 @@ def create_app(
             if d != "점장"
         ]
         return templates.TemplateResponse(
+            request,
             "kg.html",
             {
-                "request": request,
                 "as_of": as_of,
                 "stats": stats,
                 "damdangs": damdangs,
@@ -205,9 +206,9 @@ def create_app(
         ]
         has_key = bool(os.environ.get("OPENAI_API_KEY"))
         return templates.TemplateResponse(
+            request,
             "qa.html",
             {
-                "request": request,
                 "as_of": as_of,
                 "damdangs": damdangs,
                 "openai_configured": has_key,
