@@ -104,6 +104,96 @@ def test_jindyeol_inventory_rows():
     assert sample.category_value  # 메이커 column
 
 
+def _stub_record(*, filename: str, tables=None, raw_sheets=None, text: str = ""):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        attachment_id="attx",
+        filename=filename,
+        kind="excel",
+        error=None,
+        source_path="",
+        tables=tables or [],
+        raw_sheets=raw_sheets or [],
+        text=text,
+    )
+
+
+def test_unmatched_file_with_meaningful_tables_uses_heuristic():
+    record = _stub_record(
+        filename="임의_공지_자료.xlsx",
+        tables=[{
+            "sheet": "안내",
+            "columns": ["구분", "내용", "기한"],
+            "rows": [
+                ["공통", "매장 P.O.P 교체 안내드립니다", "6/30"],
+                ["가전", "신모델 진열 지침 안내드립니다", "7/2"],
+            ],
+        }],
+    )
+    assert match_profile(record.filename) is None
+    records = parse_xlsx_from_record(record, "post_h")
+    assert records
+    assert all(r.source_type == "excel_row" for r in records)
+    assert all(r.provenance.extraction == "deterministic" for r in records)
+    assert all(r.review_flag is None for r in records)
+    assert all(r.provenance.raw.get("heuristic") is True for r in records)
+    assert any("P.O.P" in r.body for r in records)
+
+
+def test_unmatched_inventory_sheet_stays_flagged_fallback():
+    record = _stub_record(
+        filename="임의_재고_자료용.xlsx",
+        tables=[{
+            "sheet": "지사지점재고확인",
+            "columns": ["모델명", "재고", "진열"],
+            "rows": [["ABC-1", "3", "1"], ["ABC-2", "5", "2"]],
+        }],
+    )
+    assert match_profile(record.filename) is None
+    records = parse_xlsx_from_record(record, "post_n")
+    assert records
+    assert all(r.source_type == "excel_fallback" for r in records)
+    assert all(r.review_flag == "xlsx_fallback" for r in records)
+
+
+def test_unmatched_col_headers_stay_flagged_fallback():
+    record = _stub_record(
+        filename="임의_기타_자료용.xlsx",
+        tables=[{
+            "sheet": "Sheet1",
+            "columns": ["col_0", "col_1", "col_2"],
+            "rows": [["a", "b", "c"], ["d", "e", "f"]],
+        }],
+    )
+    records = parse_xlsx_from_record(record, "post_c")
+    assert records
+    assert all(r.review_flag == "xlsx_fallback" for r in records)
+
+
+def test_blob_fallback_drops_empty_rows_and_columns():
+    record = _stub_record(
+        filename="임의_빈칸_자료용.xlsx",
+        raw_sheets=[{
+            "sheet": "Sheet1",
+            "rows": [
+                ["", "", "", ""],
+                ["제목", "", "값", ""],
+                ["", "", "", ""],
+                ["항목A", "", "10", ""],
+            ],
+        }],
+    )
+    records = parse_xlsx_from_record(record, "post_b")
+    assert records
+    body = records[0].body
+    assert "제목\t값" in body
+    assert "항목A\t10" in body
+    assert "\t\t" not in body
+    lines = [ln for ln in body.splitlines()[1:] if not ln.strip()]
+    assert not lines
+
+
 def test_fallback_flag_on_unknown_excel():
     record = STORE.load_record("9c9f6727c664", None)  # invalid
     if record is not None:

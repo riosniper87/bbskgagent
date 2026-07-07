@@ -330,3 +330,13 @@ th {
   .split-view,
   .sheet-panel.active { grid-template-columns: 1fr; }
 }
+
+/* quality report page */
+.muted { color: #6c757d; }
+.cards { display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+.cards .card {
+  background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+  padding: 12px 20px; display: flex; flex-direction: column; min-width: 110px;
+}
+.cards .card b { font-size: 1.4em; }
+.cards .card span { color: #6c757d; font-size: 0.85em; }

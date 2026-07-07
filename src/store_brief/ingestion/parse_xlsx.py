@@ -30,6 +30,12 @@ _MAX_ROWS_PER_TABLE = 250
 _CATEGORY_ALIASES = ("구분", "구   분", "category")
 _BRAND_MARKETING_RE = re.compile(r"브랜드\s*마케팅|브랜드커뮤니케이션", re.I)
 _NUMERIC_CELL_RE = re.compile(r"^[\d.,\s%\-:]+$")
+# Mirrors the llmwiki inventory-noise gate: wide per-branch inventory grids
+# must stay in the flagged blob fallback so downstream noise filters apply.
+_NOISY_SHEET_RE = re.compile(
+    r"지사지점재고|소진율|재고확인|마감기준|전사재고|타사환출|히어로.*진행|생산\s*계획|종합현황",
+    re.I,
+)
 
 
 @dataclass
@@ -340,13 +346,14 @@ def _tables_to_records(
     profile: XlsxProfile | None,
     extraction: str,
     review_flag: str | None,
+    heuristic: bool = False,
 ) -> list[NormalizedRecord]:
     out: list[NormalizedRecord] = []
     for table_idx, table in enumerate(tables):
         if not _sheet_allowed(table.sheet, profile):
             continue
         cat_idx = _find_category_col(table.columns, profile)
-        row_limit = _MAX_ROWS_PER_TABLE if profile and profile.header_rows else len(table.rows)
+        row_limit = _MAX_ROWS_PER_TABLE
         meaningful = _columns_are_meaningful(table.columns)
         for row_idx, row in enumerate(table.rows[:row_limit]):
             row = [str(c) if c is not None else "" for c in row]
@@ -371,6 +378,8 @@ def _tables_to_records(
             }
             if profile and profile.damdang_from:
                 raw_meta["damdang_from"] = profile.damdang_from
+            if heuristic:
+                raw_meta["heuristic"] = True
             out.append(NormalizedRecord(
                 post_id=post_id,
                 source_type="excel_row",
@@ -389,6 +398,50 @@ def _tables_to_records(
     return out
 
 
+def _heuristic_records(
+    record: StoredParseRecord,
+    post_id: str,
+    *,
+    data_dir: str | Path | None = None,
+) -> list[NormalizedRecord]:
+    """Row records from heuristic table detection when no profile matches.
+
+    Only tables with meaningful (non col_*) headers on non-inventory sheets
+    qualify — everything else stays in the flagged blob fallback so the
+    downstream noise gates keyed on review_flag still apply.
+    """
+    tables = _tables_from_record(record, None, data_dir=data_dir)
+    good = [
+        t for t in tables
+        if _columns_are_meaningful(t.columns) and not _NOISY_SHEET_RE.search(t.sheet or "")
+    ]
+    if not good:
+        return []
+    return _tables_to_records(
+        good,
+        record=record,
+        post_id=post_id,
+        profile=None,
+        extraction="deterministic",
+        review_flag=None,
+        heuristic=True,
+    )
+
+
+def _clean_blob_rows(rows: list) -> list[list[str]]:
+    """Drop empty rows/columns from a raw sheet grid for the blob fallback."""
+    grid = [[str(c) if c is not None else "" for c in row] for row in (rows or [])]
+    grid = [row for row in grid if any(c.strip() for c in row)]
+    if not grid:
+        return []
+    width = max(len(r) for r in grid)
+    keep = [
+        i for i in range(width)
+        if any(i < len(r) and r[i].strip() for r in grid)
+    ]
+    return [[r[i] if i < len(r) else "" for i in keep] for r in grid]
+
+
 def _fallback_records(
     record: StoredParseRecord,
     post_id: str,
@@ -398,7 +451,10 @@ def _fallback_records(
     for sheet in record.raw_sheets or []:
         name = sheet.get("sheet") if isinstance(sheet, dict) else sheet.sheet
         rows = sheet.get("rows") if isinstance(sheet, dict) else sheet.rows
-        lines = ["\t".join(str(c) for c in row) for row in (rows or [])[:40]]
+        cleaned = _clean_blob_rows(rows)
+        if not cleaned:
+            continue
+        lines = ["\t".join(row) for row in cleaned[:40]]
         text = f"시트: {name}\n" + "\n".join(lines)
         ref = f"{record.attachment_id}#sheet:{name}"
         out.append(NormalizedRecord(
@@ -486,6 +542,10 @@ def parse_xlsx_from_record(
             profile.name,
             record.filename,
         )
+
+    heuristic = _heuristic_records(record, post_id, data_dir=data_dir)
+    if heuristic:
+        return heuristic
 
     fallback = _fallback_records(record, post_id)
     if fallback:

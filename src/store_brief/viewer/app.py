@@ -93,6 +93,54 @@ def create_app(
             raise HTTPException(404, "post not found")
         return JSONResponse(_to_json(detail), headers=_NO_CACHE)
 
+    def _quality_report(refresh: bool) -> dict:
+        """Serve the cached report unless a refresh is requested.
+
+        Rebuilding re-parses the whole corpus (incl. OCR on scanned PDFs),
+        so the cached scripts/parse_quality_report.py output is preferred.
+        """
+        import json as _json
+
+        from store_brief.ingestion.quality import build_quality_report
+
+        cache = data_dir / "parsed" / "_quality" / "report.json"
+        if not refresh and cache.is_file():
+            try:
+                report = _json.loads(cache.read_text(encoding="utf-8"))
+                report["cached"] = True
+                return report
+            except Exception:
+                pass
+        report = build_quality_report(data_dir)
+        try:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(
+                _json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8",
+            )
+        except Exception:
+            pass
+        report["cached"] = False
+        return report
+
+    @app.get("/quality", response_class=HTMLResponse)
+    async def quality_page(request: Request, refresh: bool = False):
+        import anyio
+
+        report = await anyio.to_thread.run_sync(_quality_report, refresh)
+        return templates.TemplateResponse(
+            request,
+            "quality.html",
+            {"report": report},
+            headers=_NO_CACHE,
+        )
+
+    @app.get("/api/quality")
+    async def api_quality(refresh: bool = False):
+        import anyio
+
+        report = await anyio.to_thread.run_sync(_quality_report, refresh)
+        return JSONResponse(report, headers=_NO_CACHE)
+
     @app.get("/media/parsed/{post_id}/{rel_path:path}")
     async def media_parsed(post_id: str, rel_path: str):
         path = loader.resolve_media_path(post_id, rel_path)

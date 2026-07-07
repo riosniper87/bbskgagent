@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}파싱 품질{% endblock %}
+{% block content %}
+<h1>파싱 품질 리포트</h1>
+<p class="muted">
+  data/parsed 정규화 결과의 review_flag / extraction 분포입니다.
+  (스크립트: <code>python scripts/parse_quality_report.py</code>)
+</p>
+
+<div class="cards">
+  <div class="card"><b>{{ report.attachments_scanned }}</b><span>첨부 스캔</span></div>
+  <div class="card"><b>{{ report.records_total }}</b><span>레코드</span></div>
+  <div class="card"><b>{{ report.flagged_total }}</b><span>플래그 ({{ "%.1f"|format(report.flagged_ratio * 100) }}%)</span></div>
+</div>
+
+<h2>review_flag 분포</h2>
+{% if report.flags %}
+<table>
+  <tr><th>flag</th><th>count</th></tr>
+  {% for flag, count in report.flags.items() %}
+  <tr><td><span class="badge warn">{{ flag }}</span></td><td>{{ count }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">플래그된 레코드가 없습니다.</p>
+{% endif %}
+
+<h2>extraction 분포</h2>
+{% if report.extractions %}
+<table>
+  <tr><th>extraction</th><th>count</th></tr>
+  {% for kind, count in report.extractions.items() %}
+  <tr><td>{{ kind }}</td><td>{{ count }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">정규화된 레코드가 없습니다. (data/parsed 비어 있음)</p>
+{% endif %}
+
+{% if report.flagged_records %}
+<h2>플래그된 레코드</h2>
+<table>
+  <tr><th>flag</th><th>post</th><th>attachment</th><th>locator</th><th>title</th></tr>
+  {% for r in report.flagged_records %}
+  <tr>
+    <td><span class="badge warn">{{ r.flag }}</span></td>
+    <td><a href="/post/{{ r.post_id }}">{{ r.post_id }}</a></td>
+    <td>{{ r.attachment }}</td>
+    <td>{{ r.locator }}</td>
+    <td>{{ r.title }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

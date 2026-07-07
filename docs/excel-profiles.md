@@ -39,6 +39,22 @@ Run `python scripts/analyze_excel_profiles.py` to refresh cluster analysis from 
 Files matching `*진열소진*` without `지사지점재고확인` still use fallback unless a BCD/NON POG
 profile applies. Wide SV sheets (`행사가산출표`, `(요약)모델별진도율`) are intentionally skipped.
 
+### Unmatched-profile pipeline (2026-07)
+
+Files with **no matching profile** no longer drop straight to the blob fallback:
+
+1. **Heuristic row extraction** — structured tables from the parse store
+   (`record.tables` / raw-sheet heuristics) become `excel_row` records
+   (`extraction="deterministic"`, `raw.heuristic=true`, no review flag) when
+   headers are meaningful (majority non-`col_*`) **and** the sheet is not an
+   inventory grid (`지사지점재고확인`, `소진율`, … — mirrors the llmwiki noise gate,
+   which is keyed on `review_flag`).
+2. **Blob fallback** (`review_flag="xlsx_fallback"`) — only when the gate
+   fails. Empty rows/columns are now dropped from the TSV blob.
+
+Flag distribution is reported by `python scripts/parse_quality_report.py`
+and the viewer's `/quality` page.
+
 ## Example: 진열소진_노트북
 
 ```yaml

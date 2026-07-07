@@ -48,8 +48,43 @@ def _shape_text(shape) -> str:
     return ""
 
 
+# ~5mm rows (EMU): shapes within the same visual row sort left→right instead
+# of degenerating into a pure top-then-left order.
+_READING_ROW_EMU = 180000
+
+
 def _slide_reading_order(shapes) -> list:
-    return sorted(shapes, key=lambda s: (round((getattr(s, "top", 0) or 0) / 100000), getattr(s, "left", 0) or 0))
+    return sorted(
+        shapes,
+        key=lambda s: (
+            round((getattr(s, "top", 0) or 0) / _READING_ROW_EMU),
+            getattr(s, "left", 0) or 0,
+        ),
+    )
+
+
+def _slide_pictures(shapes) -> list:
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+    return [s for s in shapes if getattr(s, "shape_type", None) == MSO_SHAPE_TYPE.PICTURE]
+
+
+_FILENAME_DESCR_RE = re.compile(r"^[\w\-. ]+\.(png|jpe?g|gif|bmp|tiff?|emf|wmf)$", re.I)
+
+
+def _picture_alt_text(shape) -> str:
+    """Alt text (descr) of a picture shape, empty if unset or auto-generated."""
+    try:
+        el = shape._element
+        cnvpr = el.nvPicPr.cNvPr
+        descr = (cnvpr.get("descr") or "").strip()
+    except Exception:
+        return ""
+    # PowerPoint/python-pptx often auto-fill descr with the image filename —
+    # that is not meaningful alt text.
+    if _FILENAME_DESCR_RE.match(descr):
+        return ""
+    return descr
 
 
 def _is_boilerplate(text: str) -> bool:
@@ -95,6 +130,29 @@ def parse_pptx_path(path: str, post_id: str, attachment_id: str, filename: str) 
             parts.append(f"[노트] {notes}")
 
         combined = "\n".join(parts).strip()
+
+        pictures = _slide_pictures(shapes)
+        if not combined and pictures:
+            # Image-only slide: emit a flagged record instead of dropping it.
+            # Body stays alt-text-only (or empty) so the VLM description
+            # pipeline can supply text via source_ref downstream.
+            alt_texts = [t for t in (_picture_alt_text(p) for p in pictures) if t]
+            records.append(NormalizedRecord(
+                post_id=post_id,
+                source_type="pptx_slide",
+                title=f"슬라이드 {idx} (이미지)",
+                body="\n".join(alt_texts),
+                attachment_name=filename,
+                provenance=Provenance(
+                    source_ref=source_ref,
+                    locator=f"슬라이드 {idx}",
+                    raw={"slide": idx, "images": len(pictures)},
+                    extraction="fallback",
+                ),
+                review_flag="pptx_image_only",
+            ))
+            continue
+
         if _is_boilerplate(combined):
             continue
 
@@ -104,9 +162,6 @@ def parse_pptx_path(path: str, post_id: str, attachment_id: str, filename: str) 
 
         review_flag = None
         extraction: str = "deterministic"
-        if not combined:
-            review_flag = "pptx_image_only"
-            extraction = "fallback"
 
         records.append(NormalizedRecord(
             post_id=post_id,
