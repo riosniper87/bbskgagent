@@ -5,11 +5,26 @@ import math
 import re
 from collections import Counter
 
+from store_brief.qa.korean import strip_josa
+
 _TOKEN_RE = re.compile(r"[\w가-힣]+", re.UNICODE)
 
 
 def tokenize(text: str) -> list[str]:
-    return [t.lower() for t in _TOKEN_RE.findall(text or "") if len(t) >= 2]
+    """Tokenize with josa dual-emit: each token yields itself plus its
+    particle-stripped variant (when different), so doc-side "냉장고는" and
+    query-side "냉장고" match in both directions. Never replaces tokens.
+    """
+    out: list[str] = []
+    for t in _TOKEN_RE.findall(text or ""):
+        if len(t) < 2:
+            continue
+        low = t.lower()
+        out.append(low)
+        stem = strip_josa(low)
+        if stem != low and len(stem) >= 2:
+            out.append(stem)
+    return out
 
 
 class BM25Index:

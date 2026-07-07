@@ -26,6 +26,7 @@ class QuestionIntent(BaseModel):
     date_from: date | None = None
     date_to: date | None = None
     refine_query: str | None = None
+    llm_ok: bool = True  # False when LLM intent parse failed → deterministic fallback used
 
 
 class TemporalScope(BaseModel):

@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from store_brief.llmwiki.card import WikiCard
 from store_brief.qa.bm25 import BM25Index
 from store_brief.qa.corpus import QACorpus
+from store_brief.qa.korean import expand_keywords, keyword_variants
 from store_brief.qa.schemas import RetrievalHit, TemporalScope, TimeMode
 from store_brief.temporal.query import (
     active_on,
@@ -52,16 +53,28 @@ def _keyword_set(keywords: list[str]) -> set[str]:
 
 
 def keyword_overlap_count(card: WikiCard, keywords: list[str]) -> int:
-    """Count query keywords matching card.keywords or indexed text tokens."""
-    q = _keyword_set(keywords)
-    if not q:
+    """Count query keywords matching card.keywords or indexed text tokens.
+
+    Each query keyword also matches via its josa-stripped variant, but is
+    counted at most once.
+    """
+    kws = [k for k in {_norm_kw(k) for k in keywords} if k]
+    if not kws:
         return 0
     card_kw = {_norm_kw(k) for k in (card.keywords or [])}
-    overlap = q & card_kw
-    if overlap:
-        return len(overlap)
     text_l = _card_search_text(card).lower()
-    return sum(1 for k in q if k in text_l)
+
+    kw_overlap = 0
+    text_overlap = 0
+    for k in kws:
+        variants = [_norm_kw(v) for v in keyword_variants(k)]
+        if any(v in card_kw for v in variants):
+            kw_overlap += 1
+        elif any(v in text_l for v in variants):
+            text_overlap += 1
+    if kw_overlap:
+        return kw_overlap
+    return text_overlap
 
 
 def _score_card(
@@ -92,13 +105,14 @@ def _score_card(
         k = kw.lower().strip()
         if not k:
             continue
-        if k in title_l:
+        variants = [v.lower() for v in keyword_variants(k)]
+        if any(v in title_l for v in variants):
             score += 5.0
             matched_kws.append(k)
-        elif k in headline_l:
+        elif any(v in headline_l for v in variants):
             score += 3.0
             matched_kws.append(k)
-        elif k in body_l:
+        elif any(v in body_l for v in variants):
             score += 2.0
             matched_kws.append(k)
 
@@ -106,14 +120,15 @@ def _score_card(
         score += 3.0 * (len(matched_kws) - 1)
 
     q_set = _keyword_set(keywords)
+    q_expanded = _keyword_set(expand_keywords(list(q_set)))
     card_kw = {_norm_kw(k) for k in (card.keywords or [])}
     if q_set and card_kw:
-        overlap = q_set & card_kw
+        overlap = q_expanded & card_kw
         if overlap:
-            score += (len(overlap) / max(len(q_set), 1)) * 8.0
+            score += (min(len(overlap), len(q_set)) / max(len(q_set), 1)) * 8.0
 
     att_l = (card.attachment_name or "").lower()
-    for k in q_set:
+    for k in q_expanded:
         if k in att_l:
             score += 3.0
             break
@@ -227,6 +242,7 @@ def _hits_from_pool(
     anchor_source_ref: str | None = None,
     damdang_boost: set[str] | None = None,
     query_date: date | None = None,
+    pool_product_filtered: bool = False,
 ) -> list[RetrievalHit]:
     query = " ".join(keywords)
     bm25_by_id: dict[str, float] | None = None
@@ -251,7 +267,7 @@ def _hits_from_pool(
 
     hits: list[RetrievalHit] = []
     for card, sc in scored[:limit]:
-        if sc <= 0 and keywords and not product_codes:
+        if sc <= 0 and keywords and not pool_product_filtered:
             continue
         prov = corpus.provenance_by_card.get(card.id, {})
         hits.append(
@@ -274,7 +290,10 @@ def _hits_from_pool(
             ),
         )
 
-    if not hits and pool:
+    # Pad with unscored cards only for keyword-less (browse-style) queries.
+    # When keywords exist and nothing matched, returning junk hits causes
+    # wrong answers — an empty result lets the caller relax filters instead.
+    if not hits and pool and (not keywords or pool_product_filtered):
         for card in pool[:limit]:
             prov = corpus.provenance_by_card.get(card.id, {})
             hits.append(
@@ -299,6 +318,42 @@ def _hits_from_pool(
     return hits
 
 
+def _filter_product(pool: list[WikiCard], product_codes: list[str]) -> list[WikiCard]:
+    want = {p.upper() for p in product_codes}
+    return [c for c in pool if want & {x.upper() for x in c.product_codes}]
+
+
+def _apply_temporal_relaxed(
+    pool: list[WikiCard],
+    scope: TemporalScope,
+    diag: dict,
+) -> list[WikiCard]:
+    """Apply temporal filter, relaxing when it would empty a non-empty pool.
+
+    active_on that empties the pool falls back to observable_on; if any mode
+    still empties the pool, the filter is dropped. Relaxations are recorded
+    in diag so retrieval traces show where filtering failed.
+    """
+    if not pool:
+        return pool
+    filtered = _apply_temporal(pool, scope)
+    if filtered:
+        diag["pool_after_temporal"] = len(filtered)
+        return filtered
+
+    if scope.time_mode == TimeMode.active_on and scope.query_date:
+        relaxed_scope = scope.model_copy(update={"time_mode": TimeMode.observable_on})
+        filtered = _apply_temporal(pool, relaxed_scope)
+        if filtered:
+            diag["temporal_relaxed"] = "active_on->observable_on"
+            diag["pool_after_temporal"] = len(filtered)
+            return filtered
+
+    diag["temporal_relaxed"] = f"{scope.time_mode.value}->none"
+    diag["pool_after_temporal"] = len(pool)
+    return pool
+
+
 def retrieve_wiki_cards(
     corpus: QACorpus,
     *,
@@ -312,7 +367,9 @@ def retrieve_wiki_cards(
     anchor_post_id: str | None = None,
     anchor_source_ref: str | None = None,
     query_date: date | None = None,
+    diagnostics_out: dict | None = None,
 ) -> list[RetrievalHit]:
+    diag: dict = diagnostics_out if diagnostics_out is not None else {}
     product_codes = product_codes or []
     if anchor_post_id:
         anchor_d = {
@@ -322,18 +379,31 @@ def retrieve_wiki_cards(
 
     damdang_boost = set(damdangs)
     pool = list(corpus.cards)
+    diag["pool_total"] = len(pool)
 
     if notice_kinds:
         filtered = filter_by_notice_kind(pool, *notice_kinds)
         if filtered or not relax_notice_kinds:
             pool = filtered
+        else:
+            diag["notice_filter_relaxed"] = True
+        diag["pool_after_notice"] = len(pool)
 
+    # Guard: a hallucinated/wrong product code must never zero out retrieval.
+    # If the filter empties the pool, keep the unfiltered pool and rely on
+    # the +5.0 product-match scoring boost instead.
+    pool_product_filtered = False
     if product_codes:
-        want = {p.upper() for p in product_codes}
-        pool = [c for c in pool if want & {x.upper() for x in c.product_codes}]
+        filtered = _filter_product(pool, product_codes)
+        if filtered:
+            pool = filtered
+            pool_product_filtered = True
+        else:
+            diag["product_filter_relaxed"] = True
+        diag["pool_after_product"] = len(pool)
 
     if temporal_scope:
-        pool = _apply_temporal(pool, temporal_scope)
+        pool = _apply_temporal_relaxed(pool, temporal_scope, diag)
 
     qd = query_date
     if qd is None and temporal_scope and temporal_scope.query_date:
@@ -350,23 +420,31 @@ def retrieve_wiki_cards(
         keywords=keywords, product_codes=product_codes, limit=limit,
         anchor_post_id=anchor_post_id, anchor_source_ref=anchor_source_ref,
         damdang_boost=damdang_boost, query_date=qd,
+        pool_product_filtered=pool_product_filtered,
     )
 
     if not skip_dedup:
         hits = _dedup_by_topic_key(hits, cards_by_id)
 
     if notice_kinds and relax_notice_kinds and not hits:
+        diag["notice_filter_relaxed"] = True
         pool2 = list(corpus.cards)
+        pool2_product_filtered = False
         if product_codes:
-            want = {p.upper() for p in product_codes}
-            pool2 = [c for c in pool2 if want & {x.upper() for x in c.product_codes}]
+            filtered = _filter_product(pool2, product_codes)
+            if filtered:
+                pool2 = filtered
+                pool2_product_filtered = True
+            else:
+                diag["product_filter_relaxed"] = True
         if temporal_scope:
-            pool2 = _apply_temporal(pool2, temporal_scope)
+            pool2 = _apply_temporal_relaxed(pool2, temporal_scope, diag)
         hits = _hits_from_pool(
             pool2, corpus,
             keywords=keywords, product_codes=product_codes, limit=limit,
             anchor_post_id=anchor_post_id, anchor_source_ref=anchor_source_ref,
             damdang_boost=damdang_boost, query_date=qd,
+            pool_product_filtered=pool2_product_filtered,
         )
         if not skip_dedup:
             hits = _dedup_by_topic_key(hits, cards_by_id)
@@ -374,13 +452,17 @@ def retrieve_wiki_cards(
     if anchor_post_id and (not hits or top_hit_score(hits) < 5):
         anchored = [c for c in corpus.cards if c.post_id == anchor_post_id]
         if anchored:
+            diag["anchor_fallback"] = True
             hits = _hits_from_pool(
                 anchored, corpus,
                 keywords=keywords, product_codes=product_codes, limit=limit,
                 anchor_post_id=anchor_post_id, anchor_source_ref=anchor_source_ref,
                 damdang_boost=damdang_boost, query_date=qd,
+                pool_product_filtered=True,
             )
 
+    diag["hit_count"] = len(hits)
+    diag["top_score"] = top_hit_score(hits)
     return hits
 
 
@@ -388,8 +470,28 @@ def top_hit_score(hits: list[RetrievalHit]) -> float:
     return hits[0].score if hits else 0.0
 
 
-def is_weak_retrieval(hits: list[RetrievalHit]) -> bool:
+def _top_hit_keyword_coverage(hits: list[RetrievalHit], keywords: list[str]) -> int:
+    """Count query keywords (or josa-stripped variants) present in top hit text."""
     if not hits:
+        return 0
+    top = hits[0]
+    text_l = f"{top.post_title} {top.headline} {top.body_excerpt}".lower()
+    count = 0
+    for kw in _keyword_set(keywords):
+        variants = [v.lower() for v in keyword_variants(kw)]
+        if any(v in text_l for v in variants):
+            count += 1
+    return count
+
+
+def is_weak_retrieval(
+    hits: list[RetrievalHit],
+    keywords: list[str] | None = None,
+) -> bool:
+    if not hits:
+        return True
+    # Corpus-size-invariant signal: top hit shares no keyword with the query.
+    if keywords and _top_hit_keyword_coverage(hits, keywords) == 0:
         return True
     top = top_hit_score(hits)
     if top >= 8.0:

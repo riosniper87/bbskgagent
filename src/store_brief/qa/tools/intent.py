@@ -5,6 +5,7 @@ import re
 from datetime import date
 
 from store_brief.llm.client import LLMClient
+from store_brief.qa.korean import extract_question_keywords
 from store_brief.qa.schemas import QuestionIntent, TimeMode
 
 _SYSTEM = """당신은 매장 공지/판촉 Q&A 시스템의 질문 분석기입니다.
@@ -99,7 +100,11 @@ def normalize_intent_dict(raw: dict, *, question: str = "") -> dict:
 
     keywords = _as_list(raw.get("keywords"))
     if not keywords and question:
-        keywords = [w for w in re.split(r"\s+", question) if len(w) >= 2][:8]
+        # Deterministic fallback: strip josa/question words instead of a raw
+        # whitespace split, so BM25 isn't diluted by particles ("냉장고는").
+        keywords = extract_question_keywords(question)
+        if not keywords:
+            keywords = [w for w in re.split(r"\s+", question) if len(w) >= 2][:8]
 
     damdang_hints = _as_list(raw.get("damdang_hints"))
 
@@ -183,16 +188,20 @@ def parse_question_intent(
 
 위 질문을 분석해 JSON 객체 하나만 출력하세요."""
 
+    llm_ok = True
     try:
         raw = llm.complete_json(prompt, system=_SYSTEM)
         if isinstance(raw, dict) and "data" in raw and len(raw) == 1:
             raw = raw["data"]
         if not isinstance(raw, dict):
             raw = {}
+            llm_ok = False
     except Exception:
         raw = {}
+        llm_ok = False
 
     normalized = normalize_intent_dict(raw, question=question)
+    normalized["llm_ok"] = llm_ok
     intent = QuestionIntent.model_validate(normalized)
 
     if intent.query_date is None and default_query_date:

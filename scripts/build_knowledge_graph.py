@@ -13,6 +13,7 @@ Output:
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from datetime import date
@@ -23,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from store_brief import config
 from store_brief.kg.build import build_knowledge_graph
 from store_brief.kg.export import export_graph
+from store_brief.kg.validate import format_validation_summary, validate_graph
 
 log = logging.getLogger(__name__)
 
@@ -57,11 +59,22 @@ def main() -> None:
     paths = export_graph(graph, Path(data_dir) / "kg", as_of)
     stats = graph.stats()
 
+    report = validate_graph(graph)
+    validation_path = Path(paths["graph"]).parent / "validation.json"
+    validation_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8",
+    )
+
     print(f"\nKnowledge graph built: {stats['cards']} card(s)")
     print(f"  nodes: {stats['nodes']}  edges: {stats['edges']}")
     print(f"  Graph:  {paths['graph']}")
     print(f"  Stats:  {paths['stats']}")
     print(f"  By담당: {paths['by_damdang_dir']}/")
+    print(f"  Validation: {validation_path}")
+    print()
+    print(format_validation_summary(report))
+    if not report["ok"]:
+        print("\n⚠ KG 구조 문제가 발견되었습니다 — validation.json을 확인하세요.")
 
 
 if __name__ == "__main__":

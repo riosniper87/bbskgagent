@@ -1,0 +1,2 @@
+- [QA test baseline](qa-test-baseline.md) — fresh clone: ~10 pytest failures are pre-existing data-fixture gaps (missing data/), not regressions; don't chase them.
+- [Edit/test race](edit-test-race.md) — never batch file edits and pytest runs in one parallel tool call; edits can land after the test run or get clobbered, producing phantom failures.

@@ -20,6 +20,7 @@ from store_brief.qa.eval.promote import load_regression_cases
 from store_brief.qa.eval.judge import judge_answer
 from store_brief.qa.eval.report import update_global_summary, write_run_report
 from store_brief.qa.eval.schema import EvalCase, EvalResult, EvalRunSummary, LayerScores
+from store_brief.qa.korean import extract_question_keywords
 from store_brief.qa.orchestrator import QAOrchestrator
 from store_brief.qa.schemas import QAAskRequest, QAResponse
 from store_brief.qa.tools.suggest_question import suggest_question
@@ -249,9 +250,14 @@ def run_regression_eval(
                     ),
                 )
             else:
+                # Offline (no-LLM) path: deterministic keyword extraction,
+                # mirroring the intent-parse fallback used in the live pipeline.
+                offline_keywords = extract_question_keywords(case.question)
+                if not offline_keywords:
+                    offline_keywords = case.question.split()[:8]
                 hits = retrieve_wiki_cards(
                     corpus,
-                    keywords=case.question.split()[:8],
+                    keywords=offline_keywords,
                     damdangs=roster,
                     anchor_post_id=case.post_id,
                     anchor_source_ref=case.source_ref,

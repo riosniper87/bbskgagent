@@ -8,6 +8,11 @@ from pathlib import Path
 
 from store_brief.qa.bm25 import BM25Index, tokenize
 
+# v2: tokenize() dual-emits josa-stripped variants — old v1 indexes were
+# tokenized differently and must be rebuilt (load() raises; corpus.py falls
+# back to per-query BM25 until `python scripts/build_llmwiki.py`-style rebuild).
+INDEX_VERSION = 2
+
 
 @dataclass
 class SearchIndexMeta:
@@ -56,7 +61,7 @@ class CardSearchIndex:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "version": 1,
+            "version": INDEX_VERSION,
             "as_of": self.as_of,
             "built_at": self.built_at or datetime.now(timezone.utc).isoformat(),
             "card_ids": self.card_ids,
@@ -76,6 +81,12 @@ class CardSearchIndex:
         path = Path(path)
         with path.open("rb") as f:
             payload = pickle.load(f)
+        version = int(payload.get("version", 1))
+        if version != INDEX_VERSION:
+            raise ValueError(
+                f"search index version {version} != {INDEX_VERSION} "
+                f"(tokenization changed) — rebuild the index: {path}",
+            )
         card_ids = list(payload["card_ids"])
         tokenized_docs = payload["documents"]
         k1 = float(payload.get("k1", 1.5))

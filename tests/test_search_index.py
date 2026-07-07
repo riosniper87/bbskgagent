@@ -63,3 +63,26 @@ def test_score_all_card_id_keys(tmp_path):
     by_id = loaded.score_all("오클린 V8100")
     assert set(by_id.keys()) == {cards[0].id}
     assert by_id[cards[0].id] > 0
+
+
+def test_load_rejects_old_index_version(tmp_path):
+    import pickle
+
+    cards = [_card("v", "냉장고 판촉")]
+    build_search_index(cards, tmp_path, as_of="2026-06-17")
+    pkl = tmp_path / "search_index.pkl"
+    payload = pickle.loads(pkl.read_bytes())
+    payload["version"] = 1  # pre-josa-variant tokenization
+    pkl.write_bytes(pickle.dumps(payload))
+
+    with pytest.raises(ValueError, match="search index version"):
+        CardSearchIndex.load(pkl)
+
+
+def test_index_query_matches_josa_form(tmp_path):
+    # Query "냉장고는" must match a doc containing "냉장고" via dual-emit.
+    cards = [_card("j", "LG 냉장고 판촉 행사"), _card("k", "세탁기 할인")]
+    build_search_index(cards, tmp_path, as_of="2026-06-17")
+    loaded = CardSearchIndex.load(tmp_path / "search_index.pkl")
+    scores = loaded.score_all("냉장고는 판촉")
+    assert scores[cards[0].id] > scores[cards[1].id]
