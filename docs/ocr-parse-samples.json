@@ -1,0 +1,55 @@
+{
+  "tesseract_installed": false,
+  "note": "OCR 결과는 Tesseract 미설치 시 생성되지 않음. 현재 PDF는 parsed pages의 native 텍스트 사용.",
+  "pdf_samples": [
+    {
+      "post_id": "15aee8101df8",
+      "filename": "6월 ISP 연출 자체 점검 체크리스트_V2.pdf",
+      "source_ref": "15aee8101df8_6월 ISP 연출 자체 점검 체크리스트_V2.pdf#p2",
+      "extraction": "deterministic",
+      "review_flag": null,
+      "body_preview": "ISP\n9\n10\n11\n12\n13\n-Reuse\n14\n15\n   \n   \nX\n       \n                                      \n     \n  \n    \n     \n \n                      \n                 \n \n                        \n         \n \n            \n      \n  \n     \n        \n       \n        \n         \n      \n         \n       \n     \n     \n  \n    \n"
+    },
+    {
+      "post_id": "15aee8101df8",
+      "filename": "6월 ISP 연출 자체 점검 체크리스트_V2.pdf",
+      "source_ref": "15aee8101df8_6월 ISP 연출 자체 점검 체크리스트_V2.pdf#p3",
+      "extraction": "deterministic",
+      "review_flag": null,
+      "body_preview": "ISP\n16\n17\n18\n19\n(A5)\n20\n21\n22\n23\n24\n25\nX\nX\n(TV/PC\n)\nNEW"
+    },
+    {
+      "post_id": "1eca475e6409",
+      "filename": "9. [구독] 6월 구독 운영가이드_v2.pdf",
+      "source_ref": "1eca475e6409_9. [구독] 6월 구독 운영가이드_v2.pdf#p6",
+      "extraction": "deterministic",
+      "review_flag": null,
+      "body_preview": "월목표\n금액\n선할인\n12개월\n24개월\n36개월\n70만↑\n24만\n48만\n72만\n120만↑\n30만\n60만\n90만\n200만↑\n36만\n72만\n108만"
+    },
+    {
+      "post_id": "1eca475e6409",
+      "filename": "9. [구독] 6월 구독 운영가이드_v2.pdf",
+      "source_ref": "1eca475e6409_9. [구독] 6월 구독 운영가이드_v2.pdf#p8",
+      "extraction": "deterministic",
+      "review_flag": null,
+      "body_preview": "구분\n냉장고\n김치냉장고\n세탁기\n36개월\n60개월\n36개월\n60개월\n36개월\n60개월\n안심케어1 안심케어2 안심케어1 안심케어2 안심케어1 안심케어2 안심케어1 안심케어2 안심케어1 안심케어2 안심케어1 안심케어2\n방문주기\n24개월\n18개월\n24개월\n18개월\n24개월\n18개월\n24개월\n18개월\n30개월\n18개월\n30개월\n24개월\n방문횟수\n1회\n2회\n2회\n3회\n1회\n2회\n2회\n3회\n1회\n2회\n1회\n2회\n관리\n방식\n클리닝\n완전\n●\n●\n●\n●\n●\n●\n●\n●\n●\n●\n●\n●\n부분\n-\n-\n-\n-\n-\n-\n-\n-\n-\n-\n-\n-\n소모품배송\n-\n-\n-"
+    },
+    {
+      "post_id": "309f518c4af7",
+      "filename": "3-1.세일즈툴 전산개선 (패키지상품추천)v2.pdf",
+      "source_ref": "309f518c4af7_3-1.세일즈툴 전산개선 (패키지상품추천)v2.pdf#p2",
+      "extraction": "deterministic",
+      "review_flag": null,
+      "body_preview": "바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기\n바로가기"
+    },
+    {
+      "post_id": "3b9513d991f3",
+      "filename": "260604_SV팀_전시상품, 부속품 보관 가이드VF(최종).pdf",
+      "source_ref": "3b9513d991f3_260604_SV팀_전시상품, 부속품 보관 가이드VF(최종).pdf#p8",
+      "extraction": "deterministic",
+      "review_flag": null,
+      "body_preview": "진열후면\n진열전면"
+    }
+  ],
+  "ocr_tagged_in_llmwiki": 0
+}

@@ -1,0 +1,17 @@
+# Copy to settings.yaml and adjust for your environment.
+# Do not commit settings.yaml if it contains internal hostnames.
+
+vllm_base_url: "http://127.0.0.1:8000/v1"   # DGX Spark / local vLLM OpenAI-compatible endpoint
+model: "google/gemma-4-26B-A4B-it"
+openai_model: "gpt-4o-mini"   # Q&A panel — set OPENAI_API_KEY in .env
+
+data_dir: "data"
+store_path: "data/store.sqlite"
+reports_dir: "data/reports"
+
+retention_weeks: 4
+embed_model: "BAAI/bge-m3"
+use_rerank: false
+
+review_fixed_layer: true
+auto_adopt_proposals: true

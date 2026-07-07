@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Q&A 테스트 — Store Brief</title>
+  <link rel="stylesheet" href="/static/viewer.css">
+  <link rel="stylesheet" href="/static/qa-panel.css">
+</head>
+<body class="qa-page">
+  <header class="qa-header">
+    <nav class="qa-nav">
+      <a href="/">Parse Viewer</a>
+      <span class="qa-nav-sep">|</span>
+      <a href="/kg">Knowledge Graph</a>
+      <span class="qa-nav-sep">|</span>
+      <strong>Q&A 테스트</strong>
+      {% if as_of %}<span class="qa-as-of">as_of: {{ as_of }}</span>{% endif %}
+    </nav>
+    {% if not openai_configured %}
+    <div class="qa-warn">
+      OPENAI_API_KEY가 설정되지 않았습니다. <code>.env.example</code>을 <code>.env</code>로 복사 후 키를 넣으세요.
+    </div>
+    {% else %}
+    <div class="qa-meta">모델: {{ openai_model }}</div>
+    {% endif %}
+    <div id="qa-index-status" class="qa-meta">인덱스 로딩 중…</div>
+  </header>
+
+  <div class="qa-layout">
+    <section class="qa-main">
+      <form id="qa-form" class="qa-form">
+        <label class="qa-label">질문</label>
+        <div class="qa-question-row">
+          <textarea id="qa-question" rows="4" placeholder="예: 6월 중순 대형가전1 판촉 안내 알려줘" required></textarea>
+          <button type="button" id="qa-suggest" class="qa-suggest-btn" {% if not openai_configured %}disabled{% endif %} title="파싱된 공지에서 샘플 질문 생성">샘플 질문</button>
+        </div>
+        <p id="qa-suggest-hint" class="qa-suggest-hint hidden"></p>
+        <div class="qa-form-row">
+          <label>
+            담당 (선택)
+            <select id="qa-damdang">
+              <option value="">자동 추론</option>
+              {% for d in damdangs %}
+              <option value="{{ d }}">{{ d }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            기준일
+            <input type="date" id="qa-query-date" value="{{ as_of }}">
+          </label>
+          <button type="submit" id="qa-submit" {% if not openai_configured %}disabled{% endif %}>질문하기</button>
+          <button type="button" id="qa-search-only">검색만</button>
+        </div>
+      </form>
+
+      <div id="qa-loading" class="qa-loading hidden">처리 중…</div>
+
+      <article id="qa-answer" class="qa-answer hidden">
+        <h2>답변</h2>
+        <div id="qa-answer-body" class="qa-answer-body"></div>
+        <h3>참조</h3>
+        <ul id="qa-citations"></ul>
+        <h3>관련 첨부</h3>
+        <ul id="qa-attachments"></ul>
+        <h3>검색된 카드</h3>
+        <ul id="qa-hits"></ul>
+      </article>
+    </section>
+
+    <aside class="qa-trace-panel">
+      <h2>Tool 실행 트레이스</h2>
+      <div id="qa-traces"></div>
+    </aside>
+  </div>
+
+  <script>
+    window.QA_CONFIG = { as_of: {{ as_of|tojson }} };
+  </script>
+  <script src="/static/qa-panel.js"></script>
+</body>
+</html>

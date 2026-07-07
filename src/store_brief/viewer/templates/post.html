@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} — Parse Viewer{% endblock %}
+
+{% block sidebar %}
+<ul class="post-list compact">
+  <li><a href="/">← 목록으로</a></li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<article class="post-detail">
+  <header class="post-header">
+    <h1>{{ post.title }}</h1>
+    <p class="meta">{{ post.posted_date }} · parsed {{ post.parsed_at }}</p>
+  </header>
+
+  <section class="post-body">
+    <h2>본문</h2>
+    <pre class="body-text">{{ post.body }}</pre>
+  </section>
+
+  <section class="attachments">
+    <h2>첨부파일 ({{ post.attachments | length }})</h2>
+
+    {% if post.attachments %}
+    <div class="att-tabs" role="tablist">
+      {% for att in post.attachments %}
+      <button type="button"
+              class="att-tab{% if loop.first %} active{% endif %}"
+              data-att="{{ att.att_key }}"
+              role="tab">
+        {{ att.filename }}
+        <span class="kind-tag">{{ att.kind }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    {% for att in post.attachments %}
+    <div class="att-panel{% if loop.first %} active{% endif %}" data-att="{{ att.att_key }}">
+      <div class="att-meta">
+        <span>parse_mode: {{ att.parse_mode or '-' }}</span>
+        {% if att.error %}<span class="badge err">ERROR</span>{% endif %}
+      </div>
+
+      {% if att.error %}
+      <p class="error-msg">{{ att.error }}</p>
+
+      {% elif att.view_type == 'slides' %}
+      <div class="split-view slides-view" data-view="slides">
+        <div class="split-left">
+          <div class="slide-thumbs">
+            {% for page in att.pages %}
+            <button type="button"
+                    class="slide-thumb{% if loop.first %} active{% endif %}"
+                    data-index="{{ page.index }}">
+              {% if page.image_url %}
+              <img src="{{ page.image_url }}" alt="slide {{ page.index }}" loading="lazy">
+              {% else %}
+              <span class="no-img">슬라이드 {{ page.index }}</span>
+              {% endif %}
+              <span class="thumb-label">{{ page.index }}</span>
+            </button>
+            {% endfor %}
+          </div>
+          <div class="slide-main">
+            {% for page in att.pages %}
+            <figure class="slide-figure{% if loop.first %} active{% endif %}" data-index="{{ page.index }}">
+              {% if page.image_url %}
+              <img src="{{ page.image_url }}" alt="slide {{ page.index }}">
+              {% else %}
+              <p class="no-img-banner">이미지 없음 — 재파싱 필요</p>
+              {% endif %}
+            </figure>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="split-right">
+          {% for page in att.pages %}
+          <div class="page-result{% if loop.first %} active{% endif %}" data-index="{{ page.index }}">
+            <h3>슬라이드 {{ page.index }}</h3>
+            {% if page.text.strip() %}
+            <pre class="extracted-text">{{ page.text }}</pre>
+            {% else %}
+            <p class="empty">추출 텍스트 없음</p>
+            {% endif %}
+            {% if page.vlm %}
+            <div class="vlm-block">
+              <h4>VLM <span class="kind-tag">{{ page.vlm.kind }}</span></h4>
+              <p>{{ page.vlm.description }}</p>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% elif att.view_type == 'excel' %}
+      <div class="split-view excel-view" data-view="excel">
+        {% if att.sheets | length > 1 %}
+        <div class="sheet-tabs">
+          {% for sheet in att.sheets %}
+          <button type="button"
+                  class="sheet-tab{% if loop.first %} active{% endif %}"
+                  data-sheet="{{ sheet.sheet }}">
+            {{ sheet.sheet }}
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% for sheet in att.sheets %}
+        <div class="sheet-panel{% if loop.first %} active{% endif %}{% if not sheet.image_urls %} sheet-no-image{% endif %}" data-sheet="{{ sheet.sheet }}">
+          <div class="split-left">
+            {% if sheet.image_urls | length > 1 %}
+            <p class="meta">{{ sheet.image_urls | length }}개 타일</p>
+            {% endif %}
+            {% for img_url in sheet.image_urls %}
+            <img src="{{ img_url }}" alt="{{ sheet.sheet }} tile {{ loop.index }}" class="sheet-image" loading="lazy">
+            {% endfor %}
+          </div>
+          <div class="split-right">
+            {% if sheet.layout %}
+            <p class="layout-meta">
+              confidence {{ sheet.layout.confidence }}
+              {% if sheet.layout.needs_review %}<span class="badge warn">needs_review</span>{% endif %}
+            </p>
+            {% endif %}
+            {% for tbl in sheet.tables %}
+            <div class="table-block">
+              <h3>{{ tbl.title or tbl.sheet or 'table' }}</h3>
+              <p class="meta">{{ tbl.total_rows or (tbl.rows | length) }}행 × {{ tbl.columns | length }}열
+                {% if tbl.truncated %}(상위 {{ tbl.rows | length }}행만 표시){% endif %}
+              </p>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>{% for col in tbl.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+                  </thead>
+                  <tbody>
+                    {% for row in tbl.rows[:50] %}
+                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endfor %}
+            {% if not sheet.tables and sheet.raw_rows %}
+            <div class="table-block">
+              <h3>셀 그리드 (raw)</h3>
+              <p class="meta">상위 {{ sheet.raw_rows | length }}행 미리보기</p>
+              <div class="table-scroll">
+                <table>
+                  <tbody>
+                    {% for row in sheet.raw_rows %}
+                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% elif not sheet.tables %}
+            <p class="empty">구조화 테이블 없음</p>
+            {% if att.text.strip() %}
+            <pre class="extracted-text">{{ att.text[:4000] }}{% if att.text | length > 4000 %}…{% endif %}</pre>
+            {% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <pre class="extracted-text">{{ att.text }}</pre>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="empty">첨부파일 없음</p>
+    {% endif %}
+  </section>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/viewer.js"></script>
+{% endblock %}

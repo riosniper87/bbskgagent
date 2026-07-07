@@ -1,0 +1,9 @@
+# SV팀 지점 체크리스트 — 이중 헤더 3–4행
+name: 체크리스트_지점
+priority: 30
+match: "*지점 체크리스트*.xlsx"
+sheet_include:
+  - 체크리스트
+category_col: "구   분"
+header_rows: [3, 4]
+data_start_row: 5

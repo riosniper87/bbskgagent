@@ -1,0 +1,12 @@
+# 진열소진 fallback — 지사지점 시트가 있는 기타 파일
+name: 진열소진
+priority: 10
+match: "*진열소진*.xlsx"
+sheet_include:
+  - 지사지점재고확인
+header_rows: [5, 6]
+data_start_row: 8
+merge_fill_cols:
+  - 메이커
+category_col: "메이커"
+damdang_from: product

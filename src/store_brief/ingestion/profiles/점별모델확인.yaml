@@ -1,0 +1,12 @@
+# 지사지점 판매현황 — 점별모델확인 시트 (메이커·상품코드·지점 재고)
+name: 점별모델확인
+priority: 28
+match: "*지사지점*판매현황*.xlsx"
+sheet_include:
+  - 점별모델확인
+header_rows: [6, 7]
+data_start_row: 9
+merge_fill_cols:
+  - 메이커
+category_col: "메이커"
+damdang_from: product

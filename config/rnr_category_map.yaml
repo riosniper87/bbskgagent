@@ -1,0 +1,52 @@
+# Map rnr.txt 분류담당 values to report categories and manager flag.
+# Keys are exact 분류담당 strings from rnr.txt.
+managers:
+  - 점장
+
+mappings:
+  대형가전1:
+    categories: [대형가전]
+  대형가전2:
+    categories: [대형가전]
+  생활리빙:
+    categories: [생활가전]
+  생활주방:
+    categories: [생활가전, 주방]
+  주방:
+    categories: [주방]
+  IT:
+    categories: [모바일·IT]
+  계절가전:
+    categories: [계절가전]
+  케어·헬스:
+    categories: [케어·헬스]
+  Hobby:
+    categories: [Hobby]
+  KBB:
+    categories: [KBB]
+  스마트홈:
+    categories: [스마트홈]
+  스마트홈리빙:
+    categories: [스마트홈, 생활가전]
+  PC솔루션:
+    categories: [PC솔루션]
+  가전교육:
+    categories: [가전교육]
+  가전:
+    categories: [가전]
+  뷰티:
+    categories: [뷰티]
+  모바일:
+    categories: [모바일·IT]
+  스마트폰:
+    categories: [모바일·IT]
+  스마트가전:
+    categories: [대형가전]
+  애플:
+    categories: [모바일·IT]
+  케어서비스:
+    categories: [케어·헬스]
+  지원:
+    categories: [가전]
+  대형가전:
+    categories: [대형가전]

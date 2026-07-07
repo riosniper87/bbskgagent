@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets & local env
+.env
+.env.local
+*.pem
+*.key
+
+# Runtime data (company-internal)
+data/store.sqlite
+data/reports/
+data/reports-mock/
+data/parsed/
+data/raw/
+data/staging/
+data/kg/
+data/llmwiki/
+data/cache/
+data/index/
+data/eval/
+data/ingest.zip
+data/rnr.txt
+data/*.zip
+data/verify_report.json
+data/vllm_test_report.json
+!data/eval/*.example.json
+!data/README.md
+
+# Internal config (copy from *.example)
+config/settings.yaml
+config/cat.txt
+config/rnr.csv
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs & temp
+*.log
+tmp_events.txt
+_sheet_names.txt
+_sv_*.txt

@@ -1,0 +1,12 @@
+# 노트북 진열소진 — 지사지점재고확인 시트 (42열, 헤더 5–6행)
+name: 진열소진_노트북
+priority: 30
+match: "*노트북*진열소진*.xlsx"
+sheet_include:
+  - 지사지점재고확인
+header_rows: [5, 6]
+data_start_row: 8
+merge_fill_cols:
+  - 메이커
+category_col: "메이커"
+damdang_from: product

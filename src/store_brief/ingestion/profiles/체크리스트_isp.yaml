@@ -1,0 +1,9 @@
+# ISP 연출 자체 점검 체크리스트
+name: 체크리스트_isp
+priority: 30
+match: "*ISP*체크리스트*.xlsx"
+sheet_include:
+  - 체크리스트
+header_rows: [1]
+data_start_row: 2
+category_col: "구분"

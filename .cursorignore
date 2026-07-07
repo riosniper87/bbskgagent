@@ -1,0 +1,7 @@
+﻿data/parsed/
+data/raw/
+data/kg/
+data/llmwiki/
+data/cache/
+.venv/
+__pycache__/

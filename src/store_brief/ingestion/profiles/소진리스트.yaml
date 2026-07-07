@@ -1,0 +1,11 @@
+# 판촉 소진 리스트 (오클린 등) — 상품코드·행사가 테이블
+name: 소진리스트
+priority: 25
+match: "*소진현황*.xlsx"
+sheet_include:
+  - "소진 리스트"
+  - "소진리스트"
+header_rows: [2]
+data_start_row: 3
+category_col: "품목"
+damdang_from: product

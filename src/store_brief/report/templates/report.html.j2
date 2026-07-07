@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ ctx.employee.branch }} · {{ ctx.employee.name }} — {{ ctx.as_of }} 브리핑</title>
+<style>
+  body { font-family: system-ui, "Apple SD Gothic Neo", sans-serif; line-height: 1.6;
+         max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1c1c1c; }
+  header { border-bottom: 2px solid #1c1c1c; padding-bottom: .6rem; margin-bottom: 1.4rem; }
+  header .meta { color: #666; font-size: .9rem; }
+  h2 { font-size: 1.1rem; margin: 1.8rem 0 .4rem; }
+  .tag { display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 4px;
+         background: #eee; color: #333; margin-right: .35rem; }
+  .expire { border-left: 3px solid #c0392b; padding-left: .7rem; }
+  .new { border-left: 3px solid #2d7d46; padding-left: .7rem; }
+  .policy { border-left: 3px solid #b8860b; padding-left: .7rem; }
+  .item { margin: .5rem 0; }
+  .item .title { font-weight: 500; }
+  .item .summary { color: #444; font-size: .92rem; }
+  .empty { color: #999; font-style: italic; }
+  .prose { margin: .3rem 0 .8rem; }
+</style>
+</head>
+<body>
+<header>
+  <div><strong>{{ ctx.employee.branch }}</strong> ·
+    {{ ctx.employee.name }}
+    {% if ctx.employee.is_store_manager %}(점장){% else %}({{ ctx.employee.categories | join(', ') }} 담당){% endif %}
+  </div>
+  <div class="meta">기준일 {{ ctx.as_of }} · 일일 업무 브리핑</div>
+</header>
+
+<section class="expire">
+  <h2>오늘 종료되는 판촉 · 이벤트</h2>
+  {% if ctx.generated_prose.get('expiring_today') %}<p class="prose">{{ ctx.generated_prose['expiring_today'] }}</p>{% endif %}
+  {% for e in ctx.sections.expiring_today %}
+    <div class="item"><span class="tag">{{ e.type.value }}</span>
+      <span class="title">{{ e.title }}</span><div class="summary">{{ e.summary }} (종료 {{ e.valid_to }})</div></div>
+  {% else %}<p class="empty">오늘 종료되는 항목 없음</p>{% endfor %}
+</section>
+
+<section class="new">
+  <h2>이번주 신규</h2>
+  {% if ctx.generated_prose.get('new_this_week') %}<p class="prose">{{ ctx.generated_prose['new_this_week'] }}</p>{% endif %}
+  {% for e in ctx.sections.new_this_week %}
+    <div class="item"><span class="tag">{{ e.type.value }}</span>
+      <span class="title">{{ e.title }}</span><div class="summary">{{ e.summary }}</div></div>
+  {% else %}<p class="empty">신규 항목 없음</p>{% endfor %}
+</section>
+
+<section class="policy">
+  <h2>정책 변경</h2>
+  {% for p in ctx.sections.policy_changes %}
+    <div class="item"><span class="title">{{ p.new.title }}</span>
+      <div class="summary">{{ p.diff }}</div></div>
+  {% else %}<p class="empty">정책 변경 없음</p>{% endfor %}
+</section>
+
+<section>
+  <h2>진행 중 / 담당 사안</h2>
+  {% if ctx.generated_prose.get('current_relevant') %}<p class="prose">{{ ctx.generated_prose['current_relevant'] }}</p>{% endif %}
+  {% for e in ctx.sections.current_relevant %}
+    <div class="item"><span class="tag">{{ e.type.value }}</span>
+      <span class="title">{{ e.title }}</span><div class="summary">{{ e.summary }}</div></div>
+  {% else %}<p class="empty">해당 항목 없음</p>{% endfor %}
+</section>
+</body>
+</html>

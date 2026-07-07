@@ -1,0 +1,18 @@
+# Seed product-category vocabulary. Doubles as the theme anchor: extraction constrains
+# event categories to this list (+ "기타"), so emergent themes stay tied to known categories.
+categories:
+  - 대형가전
+  - 주방
+  - 생활가전
+  - TV·영상
+  - 모바일·IT
+  - 계절가전
+  - 케어·헬스
+  - Hobby
+  - KBB
+  - 스마트홈
+  - PC솔루션
+  - 가전교육
+  - 가전
+  - 뷰티
+  - 기타

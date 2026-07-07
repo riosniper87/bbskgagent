@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge Graph — Store Brief</title>
+  <link rel="stylesheet" href="/static/viewer.css">
+  <link rel="stylesheet" href="/static/kg-graph.css">
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body class="kg-page">
+  <header class="kg-header">
+    <nav class="kg-nav">
+      <a href="/">Parse Viewer</a>
+      <span class="kg-nav-sep">|</span>
+      <strong>Knowledge Graph</strong>
+      {% if as_of %}<span class="kg-as-of">{{ as_of }}</span>{% endif %}
+    </nav>
+    <div class="kg-controls">
+      <label>
+        보기
+        <select id="kg-mode">
+          <option value="spine" selected>Spine (카드·게시물·담당)</option>
+          <option value="cards">Cards (카드 중심)</option>
+          <option value="full">Full (상품 포함)</option>
+        </select>
+      </label>
+      <label>
+        담당
+        <select id="kg-damdang">
+          <option value="">전체</option>
+          {% for d in damdangs %}
+          <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="kg-check">
+        <input type="checkbox" id="kg-products"> 상품 노드
+      </label>
+      <label class="kg-check">
+        <input type="checkbox" id="kg-co-occurs"> co_occurs
+      </label>
+      <button type="button" id="kg-reload">새로고침</button>
+      <input type="search" id="kg-search" placeholder="노드 검색…">
+    </div>
+  </header>
+  <div class="kg-body">
+    <div id="kg-network"></div>
+    <aside id="kg-panel" class="kg-panel hidden">
+      <button type="button" id="kg-panel-close" aria-label="닫기">×</button>
+      <h2 id="kg-panel-title">노드</h2>
+      <pre id="kg-panel-body"></pre>
+      <div id="kg-panel-links"></div>
+    </aside>
+  </div>
+  <div id="kg-legend" class="kg-legend"></div>
+  <div id="kg-status" class="kg-status">로딩 중…</div>
+  <script>
+    window.KG_CONFIG = {
+      asOf: {{ as_of | tojson if as_of else 'null' }},
+      stats: {{ stats | tojson if stats else 'null' }}
+    };
+  </script>
+  <script src="/static/kg-graph.js"></script>
+</body>
+</html>

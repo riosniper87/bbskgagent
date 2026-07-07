@@ -1,0 +1,10 @@
+# SV팀 행사 진도율 — 행사모델_모델별 / 하이라이트_모델별 시트
+name: sv_행사모델
+priority: 28
+match: "SV팀_*진도율*.xlsx"
+sheet_include:
+  - 행사모델_모델별
+  - 하이라이트_모델별
+header_rows: [2, 3]
+data_start_row: 7
+damdang_from: product
