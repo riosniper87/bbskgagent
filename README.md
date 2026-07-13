@@ -23,6 +23,40 @@ ingest → parse → llmwiki(+HISIS 라우팅) → BM25 index
 
 ---
 
+## Knowledge Graph 온톨로지
+
+게시글·첨부를 **WikiCard spine**으로 묶고, 상품코드·분류담당·키워드를 결정적으로 연결합니다.
+
+![llmwiki Knowledge Graph Ontology](docs/assets/ontology.svg)
+
+| 노드 | 의미 |
+|------|------|
+| **Post** | 사내 게시글 |
+| **Attachment** | 첨부 (xlsx / pptx / pdf) |
+| **ContentSlice** | 슬라이드 · 시트 행 · PDF 페이지 |
+| **WikiCard** | 검색·답변의 기본 단위 |
+| **Product** | 상품코드 (`PRD_CD`) |
+| **Damdang** | 분류담당 (HISIS · `cat.txt` 라우팅) |
+| **Keyword** | 키워드 / 테마 태그 |
+
+---
+
+## Q&A 화면 예시
+
+로컬 뷰어 `/qa`에서 질문 → BM25 검색 → (선택) LLM 답변 · 참조 · 트레이스를 한 화면에서 확인합니다.
+
+![Q&A 패널 예시 — 오클린 V8100_BK 행사가](docs/assets/qa-example.png)
+
+**예시 질문:** `오클린 V8100_BK 전동칫솔 추가 행사가가 얼마인가요?`  
+**기대 흐름:** 소진 리스트 행 카드 검색 → 추가행사가 `69900` 인용 → 첨부·source_ref 표시
+
+```bash
+python scripts/serve_parse_viewer.py --port 8765 --as-of 2026-06-17
+# → http://localhost:8765/qa
+```
+
+---
+
 ## 빠른 시작
 
 ```bash
