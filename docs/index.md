@@ -34,16 +34,18 @@ ingest → parse → llmwiki(+상품코드 라우팅) → BM25 index
 
 ![llmwiki Knowledge Graph Ontology](assets/ontology.svg)
 
-게시글 → 첨부 → 슬라이스 → **WikiCard**, 그리고 Product / Damdang / Keyword로 분기합니다.
+게시글 → 첨부 → 슬라이스 → **WikiCard**, 그리고 Product / Damdang / Keyword로 분기합니다.  
+공개용 이미지에서는 상품코드·브랜드 SKU를 마스킹했습니다.
 
 ---
 
 ## Q&A 화면 예시
 
-![Q&A 패널 예시](assets/qa-example.png)
+![Q&A 패널 예시 (식별자 마스킹)](assets/qa-example.png)
 
 질문 · 담당 · 기준일 입력 후 **질문하기** / **검색만**.  
-답변 · 참조 · 검색 카드 · Tool 트레이스가 한 화면에 표시됩니다.
+답변 · 참조 · 검색 카드 · Tool 트레이스가 한 화면에 표시됩니다.  
+*(상품코드·파일명 식별자는 블러/마스킹)*
 
 ---
 

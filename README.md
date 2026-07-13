@@ -45,10 +45,11 @@ ingest → parse → llmwiki(+HISIS 라우팅) → BM25 index
 
 로컬 뷰어 `/qa`에서 질문 → BM25 검색 → (선택) LLM 답변 · 참조 · 트레이스를 한 화면에서 확인합니다.
 
-![Q&A 패널 예시 — 오클린 V8100_BK 행사가](docs/assets/qa-example.png)
+![Q&A 패널 예시 — 상품코드 마스킹](docs/assets/qa-example.png)
 
-**예시 질문:** `오클린 V8100_BK 전동칫솔 추가 행사가가 얼마인가요?`  
-**기대 흐름:** 소진 리스트 행 카드 검색 → 추가행사가 `69900` 인용 → 첨부·source_ref 표시
+**예시 질문(공개용):** `[브랜드·모델 마스킹] 전동칫솔 추가 행사가가 얼마인가요?`  
+**기대 흐름:** 소진 리스트 행 카드 검색 → 추가행사가 금액 인용 → 첨부·source_ref 표시  
+*(README/Pages 이미지에서는 상품코드·브랜드 SKU를 블러/마스킹했습니다.)*
 
 ```bash
 python scripts/serve_parse_viewer.py --port 8765 --as-of 2026-06-17
